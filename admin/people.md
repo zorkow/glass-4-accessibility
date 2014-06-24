@@ -12,6 +12,7 @@ GitHub | markglee
 
 ## Goda Bieksaite
 Email | GXB319@bham.ac.uk
+GitHub | biego
 
 ## George Brighton
 Email | GXB256@bham.ac.uk  
