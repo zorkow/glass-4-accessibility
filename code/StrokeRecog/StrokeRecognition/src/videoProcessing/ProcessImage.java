@@ -13,13 +13,27 @@ import strokeData.Coord;
  * Class containing a collection of static methods for processing images stored as OpenCV Mat objects.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-16
+ * @version 2014-07-30
  */
 public class ProcessImage {
 	
 	//constants for the lower and upper values for the colour black in the HSV space:
 	public static final Scalar BLACK_LOW_HSV = new Scalar(0,0,0);
 	public static final Scalar BLACK_HIGH_HSV = new Scalar(255,75,50);
+	
+	/**
+	 * Method to process an image for the template-matching operation.  The method sharpens the image and
+	 * removes background noise.
+	 * 
+	 * @param src - input image.
+	 * @return a copy of the src image which has been processed for use in the template-matching operation.
+	 */
+	public static Mat filterImage(Mat src) {
+		Mat stripped = new Mat();
+		src.copyTo(stripped);
+		stripped = ProcessImage.sharpenWithGaussianBlur(src, 2, 0.5);
+		return stripped;
+	}
 	
 	/**
 	 * Method to filter out colours from a src image using the defined ranges.  Pixels falling within the 
@@ -33,14 +47,33 @@ public class ProcessImage {
 	 */
 	public static Mat filterColour(Mat src, Scalar low, Scalar high) {
 		Mat stripped = new Mat();
-//		src.copyTo(stripped);
-		Imgproc.cvtColor(src, stripped, Imgproc.COLOR_BGR2HSV);
+		src.copyTo(stripped);
 		Core.inRange(stripped, low, high, stripped);
-		//erode here perhaps?
-//		Imgproc.cvtColor(src, stripped, Imgproc.COLOR_BGR2GRAY);
-//		Imgproc.threshold(stripped, stripped, 50, 255, Imgproc.THRESH_BINARY);
+		stripped = dilate(stripped, 9);
 		return stripped;
 	}
+	
+	/**
+	 * Method to apply an adaptive threshold based on  a weighted sum (cross-correlation with a Gaussian 
+	 * window) of the blockSize x blockSize neighbourhood of (x, y) minus constant.
+	 * The image is blurred prior to thresholding with a kernel if dimension blurSize.
+	 * 
+	 * @param src - the image to apply the adaptive threshold to.
+	 * @param blurSize - the dimension of the kernel to use in the blurring operation.
+	 * @param blockSize - the size of the block in the threshold operation.
+	 * @param constant - the constant to adjust the threshold by.
+	 * @return the src image with the adaptive threshold applied.
+	 */
+	public static Mat adaptiveThreshold(Mat src, int blurSize, int blockSize, double constant) {
+		
+		Mat dst = ProcessImage.blur(src, blurSize);
+		Imgproc.cvtColor(dst, dst, Imgproc.COLOR_BGR2GRAY);
+		Imgproc.adaptiveThreshold(dst, dst, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, 
+				Imgproc.THRESH_BINARY, blockSize, constant);
+		
+		return dst;
+	}
+	
 	
 	/**
 	 * Method to draw a green rectangle on the input image at the specified coordinates (topLeft) with the 
@@ -84,6 +117,21 @@ public class ProcessImage {
 	}
 	
 	/**
+	 * Method to draw a line of a specified colour on the input image between the specified start and 
+	 * end coordinates.
+	 * 
+	 * @param src - the image to draw the line on.
+	 * @param start - the coordinates of the start of the line.
+	 * @param end - the coordinates of the end of the line.
+	 * @param colour - the colour of the line specified as an RGB(?) scalar.
+	 */
+	public static void drawColouredLine(Mat src, Coord start, Coord end, Scalar colour) {
+		Point s = new Point(start.getX(), start.getY());
+		Point e = new Point(end.getX(), end.getY());
+		Core.line(src, s, e, colour, 3);
+	}
+	
+	/**
 	 * Method to normalise an image between values of 0 and 255.
 	 * 
 	 * @param src - the image to normalise.
@@ -118,6 +166,20 @@ public class ProcessImage {
 		Mat dst = new Mat();
 		Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(kSize, kSize));
 		Imgproc.dilate(src, dst, element);
+		return dst;
+	}
+	
+	/**
+	 * Performs a image erode operation on the source image.
+	 * 
+	 * @param src - the image to erode.
+	 * @param kSize the dimensions of the kernel to use in the erode operation.
+	 * @return a copy of the source image with the erode operation applied.
+	 */
+	public static Mat erode(Mat src, int kSize) {
+		Mat dst = new Mat();
+		Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(kSize, kSize));
+		Imgproc.erode(src, dst, element);
 		return dst;
 	}
 
@@ -275,6 +337,23 @@ public class ProcessImage {
 		Core.addWeighted(src, alpha, gaussBlur, beta, 0, dst);
 		
 		return dst;
+	}
+	
+	
+	/**
+	 * Method which processes the source image using an adaptive threshold, dilating and eroding operations
+	 * to extract only the ink trace as a binary image.  The source should contain only background and text.
+	 * 
+	 * @param src - image to find the ink trace in. Should only contain background and text.
+	 * @param dilateVal - the dimensions of the kernel to use in the dilate operation. 
+	 * @param erodeVal - the dimensions of the kernel to use in the erode operation.
+	 * @return a binary image containing only the ink trace.
+	 */
+	public static Mat extractInkTrace(Mat src, int dilateVal, int erodeVal) {
+		Mat thresh = ProcessImage.adaptiveThreshold(src, 3, 3, 2);
+		thresh = ProcessImage.dilate(thresh, dilateVal);
+		thresh = ProcessImage.erode(thresh, erodeVal);
+		return thresh;
 	}
 
 	

@@ -8,7 +8,7 @@ import org.opencv.highgui.VideoCapture;
  * This implementation allows the input from a webcam.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-16
+ * @version 2014-07-30
  */
 public class ProcessWebcam extends ProcessVideo {
 
@@ -66,11 +66,9 @@ public class ProcessWebcam extends ProcessVideo {
 	public int getFrameNum() {
 		return frameNum;
 	}
-	
-	/**
-	 * Method to close the camera resource.
-	 */
-	public void relaseCamera() {
+
+	@Override
+	public void releaseResources() {
 		camera.release();
 	}
 	

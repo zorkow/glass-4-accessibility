@@ -1,5 +1,6 @@
 package videoProcessing;
 
+import java.util.List;
 import java.util.Observable;
 
 import org.opencv.core.Mat;
@@ -9,6 +10,7 @@ import org.opencv.highgui.Highgui;
 import ballpointLocating.BallpointLocator;
 import penFinding.PenLocator;
 import penTracking.KalmanFilter;
+import postProcessing.StrokePostProcess;
 import strokeData.*;
 import upDownClassifier.StrokeClassifier;
 
@@ -19,7 +21,7 @@ import upDownClassifier.StrokeClassifier;
  * This forms the Model part of the Model-View pattern used for the GUI.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-16
+ * @version 2014-07-30
  */
 public abstract class ProcessVideo extends Observable {
 	
@@ -31,14 +33,16 @@ public abstract class ProcessVideo extends Observable {
 	private BallpointLocator bpl;	//the object used to find the very tip of the pen.
 	private StrokeClassifier sc;	//the object used to classify if a stroke is pen-up or pen-down.
 	
-	//the threshold which determines whether the tracker has lost the template.  If the template-match error
-	//has exceeded this value, the program reverts to searching the whole image to try to re-find the template.
-	private int errorThreshold = 70000;
+	//the threshold which determines whether the tracker has lost the template.  If the template-match fitness
+	//drops below this value, the program reverts to searching the whole image to try to re-find the template.
+	private double fitnessThreshold = 0.98;
 	
 	//constant which effectively defines the size of the ROI. The ROI is extended by SEARCH_SIZE above, 
 	//below, left and right of the predicted pen-tip location, so the ROI has dimensions 
 	//2*SEARCH_SIZE x 2*SEARCH_SIZE.
-	private static final int SEARCH_SIZE = 20;	
+	private final int SEARCH_SIZE = 20;	
+	
+	private final int RESAMPLE_STEP = 5;	//the distance between points in the resampled record.
 	
 	/**
 	 * Constructor for ProcessVideo with automatic template extraction.
@@ -55,7 +59,7 @@ public abstract class ProcessVideo extends Observable {
 	 */
 	public ProcessVideo(String template) {
 		Mat temp = Highgui.imread(template);
-		temp = ProcessImage.filterColour(temp, ProcessImage.BLACK_LOW_HSV, ProcessImage.BLACK_HIGH_HSV);
+		temp = ProcessImage.filterImage(temp);
 		pl = new PenLocator(temp);
 		initialise();
 	}
@@ -80,12 +84,12 @@ public abstract class ProcessVideo extends Observable {
 	 *  -	loop through all the frames:
 	 *  		- predict the next location of the pen using a filter.
 	 *  		- find the template in a small region of interest around the predicted location.
-	 *  		- if the error on the template match is too high in the ROI, search for the template in the 
+	 *  		- if the fitness of the template match is too poor in the ROI, search for the template in the 
 	 *  		whole image.
-	 *  		- if the error is not too high, find the ballpoint of the pen-tip and record it.
+	 *  		- find the ballpoint of the pen-tip and record it.
 	 *  		- update the filter with the actual pen location.
 	 *  - analyse the ballpoint location record to determine if the pen was in pen-up or pen-down state.
-	 *  - carry out post-processing of the strokes (NOT YET IMPLEMENTED).
+	 *  - carry out post-processing of the ballpoint record to obtain full pen strokes.
 	 */
 	public void startProcessing() {
 		
@@ -93,49 +97,62 @@ public abstract class ProcessVideo extends Observable {
 		//Indicate the location with a green rectangle on the source image.
 		img = getFrame();
 		setROI(new Coord(0,0));
-		filteredImg = ProcessImage.filterColour(img, ProcessImage.BLACK_LOW_HSV, ProcessImage.BLACK_HIGH_HSV);
-		TempMatchOutput initialMatch = pl.findTemplate(filteredImg);
+		filteredImg = ProcessImage.filterImage(img);
+		TempMatchOutput initialMatch = pl.findTemplatePyramid(filteredImg);
 		ProcessImage.drawGreenRect(img, new Point(initialMatch.getBestMatch().getX(), 
 				initialMatch.getBestMatch().getY()), pl.getTemplate().cols(), pl.getTemplate().rows());
 		
 		//initialise the filter with the initial location.
 		filter = new KalmanFilter(initialMatch.getBestMatch(), 1.0, 0.5, 1.5);
+		long t0, t1, t2, t3, t4=0, t5;
 		
 		//loop through all the frames.
 		while(frameAvailable()) {
+		
+			t0 = System.currentTimeMillis();
+			
 			//update the GUI.
 			setChanged();
 	    	notifyObservers();
+	    	
+	    	t1 = System.currentTimeMillis();
 	    	
 	    	//predict the next location of the template.
 	    	Coord predictedPos = filter.kalmanFilterPredict();
 	    	
 	    	//get the next frame and process it.
 			img = getFrame();
-			filteredImg = ProcessImage.filterColour(img, ProcessImage.BLACK_LOW_HSV, ProcessImage.BLACK_HIGH_HSV);
+			filteredImg = ProcessImage.filterImage(img);
+			
+			t2 = System.currentTimeMillis();
 			
 			//find the template in the ROI around the predicted position.
 			Coord roiPos = setROI(predictedPos);
-			TempMatchOutput localMatch = pl.findTemplate(ProcessImage.filterColour(roi, 
-					ProcessImage.BLACK_LOW_HSV, ProcessImage.BLACK_HIGH_HSV));
+			TempMatchOutput localMatch = pl.findTemplateSimple(ProcessImage.filterImage(roi));
 			Coord globalPos = new Coord(roiPos.getX() + localMatch.getBestMatch().getX(), 
 					roiPos.getY() + localMatch.getBestMatch().getY());
 			
+			t3 = System.currentTimeMillis();
+			
 			Coord bPoint = null;
-			//if the template match error is too high, search again for the template within the whole image:
-			if(localMatch.getError()>errorThreshold) {
-				globalPos = pl.findTemplate(filteredImg).getBestMatch();
-			} else {
-			//otherwise, find the 'ballpoint' of the pen within the region of interest:
+			//if the template match fitness is too poor, search again for the template within the whole image:
+			if(localMatch.getFitness()<fitnessThreshold) {
+				globalPos = pl.findTemplatePyramid(filteredImg).getBestMatch();
+			}
+			
+			t4 = System.currentTimeMillis();
+
+
+			//find the 'ballpoint' of the pen within the region of interest:
 				bPoint = bpl.findBallpoint(img.submat(globalPos.getY(), globalPos.getY()+pl.getTemplate().rows(), globalPos.getX(), globalPos.getX()+pl.getTemplate().cols()));
+				//if the ballpoint is found (i.e. not null) adjust the location into the global coordinate system.
 				if(bPoint!=null) {
 					bPoint.setX(bPoint.getX() + globalPos.getX());
 					bPoint.setY(bPoint.getY() + globalPos.getY());
-					//record the ballpoint location as a Stroke. (All Strokes are initially assumed to be pen-up
-					//and the full record is process later for pen-down strokes).
-					sc.addStroke(new Stroke(bPoint, true));
 				}
-			}
+
+			t5 = System.currentTimeMillis();
+			
 			//indicate the template location with a green rectangle on the source image.
 			ProcessImage.drawGreenRect(img, new Point(globalPos.getX(), globalPos.getY()), 
 					pl.getTemplate().cols(), pl.getTemplate().rows());
@@ -144,15 +161,45 @@ public abstract class ProcessVideo extends Observable {
 			filter.kalmanFilterMeasure(globalPos);
 			
 			//print out a summary for this frame.
-			printSummary(predictedPos, globalPos, localMatch.getError(), bPoint);
+			System.out.println("Time 1 = " + (t1-t0) + ", Time 2 = " + (t2-t1) + ", Time 3 = " + (t3-t2)
+					+ ", Time 4 = " + (t4-t3) + ", Time 5 = " + (t5-t4));
+			printSummary(predictedPos, globalPos, localMatch.getFitness(), bPoint);
 		}
 		
-		//determine the pen-down strokes and draw them on the final frame.
-//		sc.analyseRecord(img);
+		//resample ballpoint record to regular intervals:
+		bpl.resampleRecord(RESAMPLE_STEP);
+		
+		//record the ballpoint location as a Stroke. (All Strokes are initially assumed to be pen-down
+		//and the full record is analysed later for pen-up strokes).
+		for(int i=0; i<bpl.getResampledRecord().size()-1; i++) {
+			sc.addSubStroke(new SubStroke(bpl.getResampledRecord().get(i), 
+					bpl.getResampledRecord().get(i+1), true));
+		}
+		
+		//add the full tracked pen path to the filtered image for comparison.
+		sc.drawSubStrokes(filteredImg);
+		
+		//determine the pen-down/up strokes using the ink trace from the final frame.
+		Mat inkTrace = ProcessImage.extractInkTrace(img, 1, 9);
+		sc.analyseRecord(inkTrace);
+//		sc.drawSubStrokes(img);
+		sc.createStrokes();
+		
+		//remove any strokes which are 'redundant' (do not contribute sufficiently to the ink trace) and
+		//smooth out the final strokes.
+		sc.setStrokeRecord(StrokePostProcess.removeRedundancy(inkTrace, sc.getStrokeRecord()));
+		for(int i=0; i<sc.getStrokeRecord().size(); i++) {
+			List<SubStroke> lss = StrokePostProcess.smoothStroke(sc.getStrokeRecord().get(i).getPoints(), 3);
+			sc.getStrokeRecord().get(i).setPoints(lss);
+		}
+		//draw the estimated strokes on the final frame.
 		sc.drawStrokes(img);
-	    
+		
+		//finally, update the GUI with the images showing the estimated Strokes and release any resources if necessary.
 		setChanged();
 		notifyObservers();
+		
+		releaseResources();
 		
 	}
 	
@@ -178,14 +225,14 @@ public abstract class ProcessVideo extends Observable {
 	 * 
 	 * @param predicted - the predicted position of the template.
 	 * @param actual - the location of the best template match.
-	 * @param error - the error on the template match.
+	 * @param fitness - the fitness of the template match (how well it matches).
 	 * @param bPoint - the estimated coordinates of the pen ballpoint.
 	 */
-	private void printSummary(Coord predicted, Coord actual, double error, Coord bPoint) {
+	private void printSummary(Coord predicted, Coord actual, double fitness, Coord bPoint) {
 		System.out.println("Frame " + getFrameNum() + ":");
 		System.out.println("Predicted position: X = " + predicted.getX() + ", Y = " + predicted.getY());
 		System.out.println("Actual position: X = " + actual.getX() + ", Y = " + actual.getY());
-		System.out.println("Template match error = " + error);
+		System.out.println("Template match fitness = " + fitness);
 		if(bPoint!=null) {
 			System.out.println("Estimated ballpoint location: X = " + bPoint.getX() + ", Y = " + bPoint.getY());
 		}
@@ -212,6 +259,11 @@ public abstract class ProcessVideo extends Observable {
 	 * @return the current frame number.
 	 */
 	public abstract int getFrameNum();
+	
+	/**
+	 * Method to release any used resources (e.g. VidCap) if required.
+	 */
+	public abstract void releaseResources();
 	
 	/**
 	 * getter for the PenLocator object.
@@ -249,6 +301,27 @@ public abstract class ProcessVideo extends Observable {
 		return filteredImg;
 	}
 	
+	
+//	Method no longer used:
+//	private void printList(List<Coord> result, int index) {
+//		BufferedWriter out = null;
+//		try {
+//			out = new BufferedWriter(new FileWriter("C:\\Users\\Simon\\Desktop\\glassVids\\templates\\bPoint\\bpoint-" + index + ".txt"));
+//			for(int i=0; i<result.size(); i++) {
+//				out.write(result.get(i).getX() + ", " + result.get(i).getY() + System.lineSeparator());
+//			}
+//		} catch(IOException e) {
+//			e.printStackTrace();
+//		} finally {
+//			if(out!=null) {
+//				try {
+//					out.close();
+//				} catch(IOException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+//	}
 }
 
 

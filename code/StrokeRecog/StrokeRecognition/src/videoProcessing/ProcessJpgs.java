@@ -9,7 +9,7 @@ import org.opencv.highgui.Highgui;
  * sequentially numbered frames.  (Frames should be numbered 1, 2, 3, etc. not 01, 02, 045 etc.)
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-16
+ * @version 2014-07-30
  */
 public class ProcessJpgs extends ProcessVideo {
 
@@ -68,6 +68,11 @@ public class ProcessJpgs extends ProcessVideo {
 	@Override
 	public int getFrameNum() {
 		return frameNum;
+	}
+
+	@Override
+	public void releaseResources() {
+		//do not need to do release any resources.
 	}
 	
 }

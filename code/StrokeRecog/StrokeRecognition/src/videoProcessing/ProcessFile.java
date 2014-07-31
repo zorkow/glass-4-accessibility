@@ -9,7 +9,7 @@ import org.opencv.highgui.VideoCapture;
  * 
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-16
+ * @version 2014-07-30
  */
 public class ProcessFile extends ProcessVideo {
 
@@ -68,6 +68,11 @@ public class ProcessFile extends ProcessVideo {
 	@Override
 	public int getFrameNum() {
 		return frameNum;
+	}
+
+	@Override
+	public void releaseResources() {
+		vid.release();
 	}
 	
 }

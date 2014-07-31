@@ -55,5 +55,7 @@ public class Coord {
 		this.y = y;
 	}
 
-	
+	public String toString() {
+		return "X = " + getX() + ", Y = " + getY();
+	}
 }

@@ -42,10 +42,10 @@ public class VideoFrameMainTest {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
 		//input variables (See JavaDoc for this Class for details)
-		String templateFile = "C:\\Users\\Simon\\Desktop\\frames3\\template.jpg";
+		String templateFile = "C:\\Users\\Simon\\Desktop\\glassVids\\templates\\templateBlue4.jpg";
 //		int webcamNum = 0;
-		String videoFile = "C:\\Users\\Simon\\Desktop\\frames4\\vid2.mp4";
-//		String jpgFile = "C:\\Users\\Simon\\Desktop\\frames7\\frame_";
+		String videoFile = "C:\\Users\\Simon\\Desktop\\glassVids\\Blue-4\\blue-vid12.mp4";
+//		String jpgFile = "C:\\Users\\Simon\\Desktop\\frames8\\frame_";
 		
 		//set up the GUI on the screen as desired.
 		VideoFrame vidFrame = new VideoFrame(new Dimension(426, 320), new Dimension(100, 100));
@@ -64,7 +64,7 @@ public class VideoFrameMainTest {
 		vidFrame.startVideo(videoFile, templateFile);
 		
 		//3 - collection of jpg frames input, user-defined template.
-//		vidFrame.startVideo(jpgFile, 310, templateFile);
+//		vidFrame.startVideo(jpgFile, 179, templateFile);
 		
 		
 		//NOTE: automated template extraction not yet implemented!
