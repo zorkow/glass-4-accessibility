@@ -24,7 +24,31 @@ import strokeData.SubStroke;
  */
 public class StrokePostProcess {
 	
-	private static final int STROKE_REMOVE_THRESH = 60000;
+	private static final int STROKE_REMOVE_THRESH = 55000;
+	
+	public static List<Stroke> splitStrokesByDirection(List<Stroke> strokes) {
+		
+		List<Stroke> corrected = new ArrayList<Stroke>();
+		
+		for(int i=0; i<strokes.size(); i++) {
+			List<SubStroke> lss = strokes.get(i).getPoints();
+			int splitRef = 0;
+			
+			for(int j=1; j<lss.size(); j++) {
+				double angleDiff = (lss.get(j-1).getBearing()) - (lss.get(j).getBearing());
+				angleDiff = Math.abs((angleDiff + 180) % 360) - 180;
+
+				if(Math.abs(angleDiff)>90) {
+					corrected.add(new Stroke(lss.subList(splitRef, j)));
+					splitRef=j;
+				}
+			}
+			corrected.add(new Stroke(lss.subList(splitRef, lss.size())));
+		}
+		
+		return corrected;
+	}
+	
 	
 	/**
 	 * Method which checks whether any Stroke does not contribute significantly to the ink trace (i.e. there

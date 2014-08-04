@@ -435,8 +435,67 @@ public class BallpointLocator {
 		return resampledRecord;
 	}
 	
+	public void checkRecord() {
+		
+		ArrayList<Coord> corrected = new ArrayList<Coord>();
+		corrected.add(ballpointRecord.get(0));
+		
+		for(int i=1; i<ballpointRecord.size(); i++) {
+			
+			if(ballpointRecord.get(i).findDist(corrected.get(corrected.size()-1))<100) {
+				corrected.add(ballpointRecord.get(i));
+			}  else {
+				i = checkAhead(i-1, 10);
+				corrected.add(ballpointRecord.get(i));
+			}
+			
+		}
+		ballpointRecord = corrected;
+	}
 	
+	private int checkAhead(int start, int count) {
+		
+		for(int j=2; j<count && (start+j)<ballpointRecord.size(); j++) {
+			if(ballpointRecord.get(start).findDist(ballpointRecord.get(start+j))<100) {
+				return start+j;
+			}
+		}
+		return start+1;
+		
+	}
 	
+	public void smoothRecord() {
+		
+		ArrayList<Coord> smoothed = new ArrayList<Coord>();
+		smoothed.add(ballpointRecord.get(0));
+
+		for(int i=1; i<ballpointRecord.size()-2; i++) {
+			Coord c1 = ballpointRecord.get(i-1);
+			Coord c2 = ballpointRecord.get(i);
+			Coord c3 = ballpointRecord.get(i+1);
+
+			smoothed.add(new Coord((c1.getX()+c2.getX()+c3.getX())/3, (c1.getY()+c2.getY()+c3.getY())/3));
+		}
+		
+		smoothed.add(ballpointRecord.get(ballpointRecord.size()-1));
+		ballpointRecord = smoothed;
+	}
+	
+	public void smoothResampledRecord() {
+		
+		ArrayList<Coord> smoothed = new ArrayList<Coord>();
+		smoothed.add(resampledRecord.get(0));
+
+		for(int i=1; i<resampledRecord.size()-3; i++) {
+			Coord c1 = resampledRecord.get(i-1);
+			Coord c2 = resampledRecord.get(i+1);
+
+			smoothed.add(new Coord((c1.getX()+c2.getX())/2, (c1.getY()+c2.getY())/2));
+		}
+		
+		smoothed.add(resampledRecord.get(resampledRecord.size()-1));
+		resampledRecord = smoothed;
+	}
 	
 //	Methods no longer used:
 //	/**

@@ -81,4 +81,16 @@ public class SubStroke {
 	public double getLength() {
 		return Math.sqrt(Math.pow(start.getX()-end.getX(), 2) + Math.pow(start.getY()-end.getY(), 2));
 	}
+	
+	public double getBearing() {
+		int deltaX = end.getX() - start.getX();
+		int deltaY = end.getY() - start.getY();
+		
+		double angleInRad = Math.atan2(deltaY, deltaX);
+		double angleInDeg = angleInRad * 180 / Math.PI;
+		angleInDeg = (angleInDeg*-1) + 90;
+		double bearing = (angleInDeg + 360) % 360;
+		
+		return bearing;
+	}
 }

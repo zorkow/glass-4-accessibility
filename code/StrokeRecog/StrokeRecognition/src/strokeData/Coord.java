@@ -23,6 +23,12 @@ public class Coord {
 		this.y=y;
 	}
 
+	
+	public int findDist(Coord other) {
+		double dist = Math.sqrt(Math.pow(getX()-other.getX(), 2) + Math.pow(getY()-other.getY(), 2));
+		return (int) Math.round(dist);
+	}
+	
 	/**
 	 * getter for the x coordinate.
 	 * @return the x coordinate.

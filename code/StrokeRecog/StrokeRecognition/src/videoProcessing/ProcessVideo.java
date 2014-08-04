@@ -1,5 +1,8 @@
 package videoProcessing;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 import java.util.Observable;
 
@@ -167,7 +170,10 @@ public abstract class ProcessVideo extends Observable {
 		}
 		
 		//resample ballpoint record to regular intervals:
+		bpl.checkRecord();
+		bpl.smoothRecord();
 		bpl.resampleRecord(RESAMPLE_STEP);
+//		bpl.smoothResampledRecord();
 		
 		//record the ballpoint location as a Stroke. (All Strokes are initially assumed to be pen-down
 		//and the full record is analysed later for pen-up strokes).
@@ -184,6 +190,7 @@ public abstract class ProcessVideo extends Observable {
 		sc.analyseRecord(inkTrace);
 //		sc.drawSubStrokes(img);
 		sc.createStrokes();
+		sc.setStrokeRecord(StrokePostProcess.splitStrokesByDirection(sc.getStrokeRecord()));
 		
 		//remove any strokes which are 'redundant' (do not contribute sufficiently to the ink trace) and
 		//smooth out the final strokes.
@@ -194,7 +201,7 @@ public abstract class ProcessVideo extends Observable {
 		}
 		//draw the estimated strokes on the final frame.
 		sc.drawStrokes(img);
-		
+
 		//finally, update the GUI with the images showing the estimated Strokes and release any resources if necessary.
 		setChanged();
 		notifyObservers();
@@ -303,25 +310,25 @@ public abstract class ProcessVideo extends Observable {
 	
 	
 //	Method no longer used:
-//	private void printList(List<Coord> result, int index) {
-//		BufferedWriter out = null;
-//		try {
-//			out = new BufferedWriter(new FileWriter("C:\\Users\\Simon\\Desktop\\glassVids\\templates\\bPoint\\bpoint-" + index + ".txt"));
-//			for(int i=0; i<result.size(); i++) {
-//				out.write(result.get(i).getX() + ", " + result.get(i).getY() + System.lineSeparator());
-//			}
-//		} catch(IOException e) {
-//			e.printStackTrace();
-//		} finally {
-//			if(out!=null) {
-//				try {
-//					out.close();
-//				} catch(IOException e) {
-//					e.printStackTrace();
-//				}
-//			}
-//		}
-//	}
+	private void printList(List<Coord> result, int index) {
+		BufferedWriter out = null;
+		try {
+			out = new BufferedWriter(new FileWriter("C:\\Users\\Simon\\Desktop\\glassVids\\templates\\bPoint\\bpoint-" + index + ".txt"));
+			for(int i=0; i<result.size(); i++) {
+				out.write(result.get(i).getX() + ", " + result.get(i).getY() + System.lineSeparator());
+			}
+		} catch(IOException e) {
+			e.printStackTrace();
+		} finally {
+			if(out!=null) {
+				try {
+					out.close();
+				} catch(IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 }
 
 
