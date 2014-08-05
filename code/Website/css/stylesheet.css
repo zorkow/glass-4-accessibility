@@ -24,11 +24,11 @@
 
 @font-face {
     font-family: 'ContraCondensedLight';
-    src: url('contracond-light-webfont.eot');
-    src: url('contracond-light-webfont.eot?#iefix') format('embedded-opentype'),
-         url('contracond-light-webfont.woff') format('woff'),
-         url('contracond-light-webfont.ttf') format('truetype'),
-         url('contracond-light-webfont.svg#ContraCondensedLight') format('svg');
+    src: url('fonts/contracond-light-webfont.eot');
+    src: url('fonts/contracond-light-webfont.eot?#iefix') format('embedded-opentype'),
+         url('fonts/contracond-light-webfont.woff') format('woff'),
+         url('fonts/contracond-light-webfont.ttf') format('truetype'),
+         url('fonts/contracond-light-webfont.svg#ContraCondensedLight') format('svg');
     font-weight: normal;
     font-style: normal;
 
