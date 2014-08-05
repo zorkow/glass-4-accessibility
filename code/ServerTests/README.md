@@ -45,3 +45,9 @@ The best way depends on what we eventually want to be able to do:
 Instances of classes implementing Java's [`Serializable`](http://docs.oracle.com/javase/7/docs/api/java/io/Serializable.html) interface can be automatically sent down a wire and resurrected at the other end, with very little work. This method requires the use of sockets and Java both on Glass and on the server.
 
 The only clear clear disadvantages of this are the language constraints it imposes, and the fact that data has to be represented in objects. If lots of image data has to be loaded into memory, it could potentially cause problems on Glass. 
+
+### Protocol Buffers
+
+[Protocol Buffers](https://developers.google.com/protocol-buffers/docs/overview) are a platform-independent format for serializing structured data. Unlike JSON, binary data transmission is supported natively.
+
+Protocol compilers are available for Java and Python, and there are several unofficial [JavaScript implementations](http://stackoverflow.com/a/6929169/2765666).
