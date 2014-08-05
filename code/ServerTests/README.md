@@ -43,9 +43,9 @@ The best way depends on what we eventually want to be able to do:
 
 ### Java Serialization
 
-Instances of classes implementing Java's [`Serializable`](http://docs.oracle.com/javase/7/docs/api/java/io/Serializable.html) interface can be automatically sent down a wire and resurrected at the other end, with very little work. This method requires the use of sockets and Java both on Glass and on the server.
+Java has a marker interface called [`Serializable`](http://docs.oracle.com/javase/7/docs/api/java/io/Serializable.html). Objects of classes implementing this can be automatically turned into and resurrected from binary with very little programmer work. The most common use is file storage, but as the format is binary, it can be sent over a socket instead. This method would require the use of Java and sockets both on Glass and on the server (there is a [Java Object Serialization Specification](http://docs.oracle.com/javase/jp/8/platform/serialization/spec/serialTOC.html), but Java is the only language that implements it).
 
-The only clear clear disadvantages of this are the language constraints it imposes, and the fact that data has to be represented in objects. If lots of image data has to be loaded into memory, it could potentially cause problems on Glass. 
+The only clear clear disadvantages of this are the language constraints it imposes, and the fact that data has to be represented in objects. If lots of image data has to be loaded into memory, it could easily cause problems on Glass. 
 
 ### Protocol Buffers
 
