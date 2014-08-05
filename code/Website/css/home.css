@@ -1,133 +1,155 @@
-#wrapper{
-
-
-padding-left: 20%;
-padding-right: 20%;
-font-family: 'ContraCondensedLight';
+#wrapper {
+	padding-left: 20%;
+	padding-right: 20%;
+	font-family: ContraCondensedLight;
 }
-img#formula{
-	height:80px;
+
+img#formula {
+	height: 80px;
 	position: relative;
 	top: -20px;
 }
-#video{
-width: 60%;
-padding-left:20%;	
+
+#video {
+	width: 60%;
+	padding-left: 20%;
 }
-.more{
-text-decoration: none;	
+
+.more {
+	text-decoration: none;
 }
+
 #navigation {
-text-align: center;	
-float:right;
-padding-top: 15px;
-color: #FFFFFF;
-background-color: white;
-height: 35px;
+	text-align: center;
+	float: right;
+	padding-top: 15px;
+	color: #FFF;
+	background-color: #FFF;
+	height: 35px;
 }
-#title{
-	float:left; 
+
+#title {
+	float: left;
 }
-#incl{
+
+#incl {
 	height: 50px;
 }
-img#glasslogo{
-position:relative;
-top: -20px;
-left:30px;
-height: 80px;
+
+img#glasslogo {
+	position: relative;
+	top: -20px;
+	left: 30px;
+	height: 80px;
 }
-.top{
-position: relative;
-top: -20px;	
+
+.top {
+	position: relative;
+	top: -20px;
 }
-.bottom{
-position:relative;
-top: -50px;	
+
+.bottom {
+	position: relative;
+	top: -50px;
 }
-h1{
-	color: 	#30AC30;
-	font-size: 22px
+
+h1 {
+	color: #30AC30;
+	font-size: 22px;
 }
-.text{
-font-size:20px;	
-text-align: justify;
+
+.text {
+	font-size: 20px;
+	text-align: justify;
 }
-img.symbol{
-	height: 50px;	
+
+img.symbol {
+	height: 50px;
 	position: relative;
 	left: -20px;
 	right: -50px;
-	
 }
-.position{
-margin-top: -10px;	
+
+.position {
+	margin-top: -10px;
 }
-.email{
-margin-top: -10px;	
+
+.email {
+	margin-top: -10px;
 }
-.website{
-margin-top: -10px;	
+
+.website {
+	margin-top: -10px;
 }
-#content{
-	float:left;
+
+#content {
+	float: left;
 }
-img.sponsor{
-	height: 35px;	
+
+img.sponsor {
+	height: 35px;
 	padding-left: 30px;
 	padding-top: 20px;
 }
-img.imgonpage{
-height: 70px;
-display:inline;	
-position: relative;
-padding-right: 10px;
-}
-#navigation a {
-font-size: 18px;
-padding-left: 15px;
-padding-right: 15px;
-color: black;
-text-decoration: none;
-}
-img#sdagppl{
-height: 80px;
-width:200px;	
-float: right;
-}
-img#sdag{
-height: 45px;
-padding-right:20px;	
-}
-#logo{
-text-align: left;
-padding: 0px;
-}
-p.name{
-font-weight:bold;	
-}
-/*p.position{
-font-style:italic;	
-}*/
-#navigation a:hover {
-color: grey;
-} 
-div.left{
-width: 47.5%;
-float: left;
-}
-div.right{
-padding-left:5%;
-width: 47.5%;
-float: left;
-}
-div.nhome{	
-	line-height: 1.5;
-}
-.team{
-font-size:18px;	
+
+img.imgonpage {
+	height: 70px;
+	display: inline;
+	position: relative;
+	padding-right: 10px;
 }
 
-div.person{
-padding-bottom: 2.5px;	
+#navigation a {
+	font-size: 18px;
+	padding-left: 15px;
+	padding-right: 15px;
+	color: #000;
+	text-decoration: none;
+}
+
+img#sdagppl {
+	height: 80px;
+	width: 200px;
+	float: right;
+}
+
+img#sdag {
+	height: 45px;
+	padding-right: 20px;
+}
+
+#logo {
+	text-align: left;
+	padding: 0;
+}
+
+p.name {
+	font-weight: 700;
+}
+
+#navigation a: hover {
+	color: grey;
+}
+
+div.left {
+	width: 47.5%;
+	float: left;
+}
+
+div.right {
+	padding-left: 5%;
+	width: 47.5%;
+	float: left;
+}
+
+div.nhome {
+	line-height: 1.5;
+}
+
+.team {
+	font-size: 18px;
+}
+
+div.person {
+	padding-bottom: 2.5px;
 }
