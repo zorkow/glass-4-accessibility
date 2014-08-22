@@ -1,7 +1,13 @@
 package videoProcessing;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -13,22 +19,18 @@ import strokeData.Coord;
  * Class containing a collection of static methods for processing images stored as OpenCV Mat objects.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-30
+ * @version 2014-08-20
  */
 public class ProcessImage {
 	
-	//constants for the lower and upper values for the colour black in the HSV space:
-	public static final Scalar BLACK_LOW_HSV = new Scalar(0,0,0);
-	public static final Scalar BLACK_HIGH_HSV = new Scalar(255,75,50);
-	
 	/**
-	 * Method to process an image for the template-matching operation.  The method sharpens the image and
+	 * Method to prepare an image for the template-matching operation.  The method sharpens the image and
 	 * removes background noise.
 	 * 
 	 * @param src - input image.
 	 * @return a copy of the src image which has been processed for use in the template-matching operation.
 	 */
-	public static Mat filterImage(Mat src) {
+	public static Mat prepareImage(Mat src) {
 		Mat stripped = new Mat();
 		src.copyTo(stripped);
 		stripped = ProcessImage.sharpenWithGaussianBlur(src, 2, 0.5);
@@ -86,6 +88,45 @@ public class ProcessImage {
 	 */
 	public static void drawGreenRect(Mat src, Point topLeft, int dx, int dy) {
 		Core.rectangle(src, topLeft, new Point(topLeft.x + dx, topLeft.y + dy), new Scalar(0, 255, 0));
+	}
+	
+	/**
+	 * Method to draw a black rectangle on the input image at the specified coordinates (topLeft) with the 
+	 * specified dimensions (dx by dy).
+	 * 
+	 * @param src - the image to draw the rectangle on.
+	 * @param topLeft - the coordinates of the top left corner of the rectangle.
+	 * @param dx - the width of the rectangle.
+	 * @param dy - the height of the rectangle.
+	 */
+	public static void drawBlackRect(Mat src, Point topLeft, int dx, int dy) {
+		Core.rectangle(src, topLeft, new Point(topLeft.x + dx, topLeft.y + dy), new Scalar(0, 0, 0));
+	}
+	
+	/**
+	 * Method to draw a rectangle of the specified colour on the input image at the specified coordinates 
+	 * (topLeft) with the specified dimensions (dx by dy).
+	 * 
+	 * @param src - the image to draw the rectangle on.
+	 * @param topLeft - the coordinates of the top left corner of the rectangle.
+	 * @param dx - the width of the rectangle.
+	 * @param dy - the height of the rectangle.
+	 */
+	public static void drawColouredRect(Mat src, Point topLeft, int dx, int dy, Scalar colour) {
+		Core.rectangle(src, topLeft, new Point(topLeft.x + dx, topLeft.y + dy), colour);
+	}
+	
+	/**
+	 * Method to draw a red rectangle on the input image at the specified coordinates (topLeft) with the 
+	 * specified dimensions (dx by dy).
+	 * 
+	 * @param src - the image to draw the rectangle on.
+	 * @param topLeft - the coordinates of the top left corner of the rectangle.
+	 * @param dx - the width of the rectangle.
+	 * @param dy - the height of the rectangle.
+	 */
+	public static void drawRedRect(Mat src, Point topLeft, int dx, int dy) {
+		Core.rectangle(src, topLeft, new Point(topLeft.x + dx, topLeft.y + dy), new Scalar(0, 0, 255));
 	}
 	
 	
@@ -206,8 +247,6 @@ public class ProcessImage {
 	 */
 	public static Mat cannyEdge(Mat src, int highThresh, int lowThresh) {
 		Mat dst = new Mat();
-//		double highThresh = Imgproc.threshold(src, new Mat(), 250, 255, Imgproc.THRESH_BINARY);
-//		double lowThresh = highThresh/2;
 		Imgproc.Canny(src, dst, lowThresh, highThresh);
 		return dst;
 	}
@@ -271,16 +310,16 @@ public class ProcessImage {
 	 * @param out - the Mat on which to draw the line.
 	 * @param val - used to adjust the shade of red drawn by the line (0 - full red, 255 - white).
 	 */
-	private static void println(double rho, double theta, Mat out, int val) {
+	private static void println(double rho, double theta, Mat img, int val) {
 		double a = Math.cos(theta);
 		double b = Math.sin(theta);
 		double x0 = a*rho;
 		double y0 = b*rho;
 		Point p1 = new Point(x0+1000*(-b), y0+1000*(a));
 		Point p2 = new Point(x0-1000*(-b), y0-1000*(a));
-		Core.line(out, p1, p2, new Scalar(val,val,255));
+		Core.line(img, p1, p2, new Scalar(val,val,255));
 		
-//		Maybe think about doing it this way:
+//		Maybe think about doing it this way?:
 //		x= -10:10;
 //		y = (rho - x* cos(theta) )/ sin(theta);
 	}
@@ -303,6 +342,7 @@ public class ProcessImage {
 	/**
 	 * Method to create a 3x3 kernel that can be used in conjunction with a 2D filter (ref convolveImage() )
 	 * to sharpen an image.
+	 * Kernel is taken from: ( http://en.wikipedia.org/wiki/Kernel_(image_processing) )
 	 * 
 	 * @return the 3x3 kernel for image sharpening.
 	 */
@@ -313,8 +353,8 @@ public class ProcessImage {
 		double[] val2 = {5.0};
 		kernel.put(0, 1, val1);
 		kernel.put(1, 0, val1);
-		kernel.put(2, 1, val1);
 		kernel.put(1, 2, val1);
+		kernel.put(2, 1, val1);
 		kernel.put(1, 1, val2);
 		
 		return kernel;
@@ -356,5 +396,43 @@ public class ProcessImage {
 		return thresh;
 	}
 
-	
+	/**
+	 * (NOT CURRENTLY USED)
+	 * Method to calculate and draw the histogram of a supplied grayscale image.
+	 * 
+	 * Based on OpenCV tutorial ( http://docs.opencv.org/doc/tutorials/imgproc/histograms/histogram_calculation/histogram_calculation.html )
+	 * and SO question ( http://stackoverflow.com/questions/22464503/how-to-use-opencv-to-calculate-hsv-histogram-in-java-platform )
+	 * 
+	 * @param srcGray - the grayscale image to calculate the histogram for.
+	 * @param numBins - the number of 'bins' to use for the histogram.
+	 * @return the histogram for the supplied grayscale image.
+	 */
+	public static Mat calcGrayHistogram(Mat srcGray, int numBins) {
+
+	    List<Mat> planes = new ArrayList<Mat>();
+	    planes.add(srcGray);
+
+	    MatOfInt histSize = new MatOfInt(numBins);
+	    MatOfFloat histRange = new MatOfFloat(0, 256);
+	    boolean accumulate = false;
+
+	    Mat hist = new Mat();
+
+	    Imgproc.calcHist(planes, new MatOfInt(0), new Mat(), hist, histSize, histRange, accumulate);
+	    
+	    int hist_w = 512;
+	    int hist_h = 600;
+	    int bin_w = (int) Math.round( hist_w / histSize.get(0, 0)[0]);
+
+	    Mat histImage = new Mat(hist_h, hist_w, CvType.CV_8UC1);
+	    Core.normalize(hist, hist, 0, histImage.rows(), Core.NORM_MINMAX, -1);
+
+	    for (int i = 1; i < 256; i++) {
+	        Point p1 = new Point(bin_w * (i - 1), hist_h - Math.round(hist.get(i - 1, 0)[0]));
+	        Point p2 = new Point(bin_w * (i), hist_h - Math.round(hist.get(i, 0)[0]));
+	        Core.line(histImage, p1, p2, new Scalar(255, 255, 255), 2);
+	    }
+
+	    return histImage;
+	}
 }

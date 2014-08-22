@@ -9,13 +9,14 @@ import org.opencv.highgui.VideoCapture;
  * 
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-30
+ * @version 2014-08-20
  */
 public class ProcessFile extends ProcessVideo {
 
 	private int frameNum;	//the current frame number.
 	private int lastFrame;		//the final frame number
 	private VideoCapture vid;	//the object through which the video file is accessed.
+	private Mat currentFrame;
 	
 	/**
 	 * Constructor for ProcessFile objects with automatic template extraction.
@@ -50,14 +51,22 @@ public class ProcessFile extends ProcessVideo {
 		}
 		frameNum = 1;
 		lastFrame = (int) vid.get(7);	//video property code 7 is the frame count.
+		currentFrame = new Mat();
 	}
+	
 
 	@Override
 	public Mat getFrame() {
 		Mat frame = new Mat();
 		vid.read(frame);
+		frame.copyTo(currentFrame);
 		frameNum++;
 		return frame;
+	}
+	
+	@Override
+	public Mat getCurrentFrame() {
+		return currentFrame;
 	}
 	
 	@Override

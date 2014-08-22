@@ -9,23 +9,38 @@ import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+//import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import strokeData.Coord;
 import strokeData.Stroke;
 import strokeData.SubStroke;
+import videoProcessing.ProcessImage;
 
 /**
  * Class containing a number of methods for post-processing the collection of Strokes after they have been
  * obtained.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-30
+ * @version 2014-08-20
  */
 public class StrokePostProcess {
 	
-	private static final int STROKE_REMOVE_THRESH = 55000;
+	private static final int STROKE_REMOVE_THRESH = 70000;
 	
+	//if the angle (in degrees) between the two vectors of two consecutive sub-strokes is greater than 
+	//this threshold, the strokes are split into separate strokes at this point..
+	private static final int DIRECTION_CHANGE_THRESH = 90;
+	
+	/**
+	 * Method to divide strokes where there is a sharp change of direction within a Stroke.
+	 * If the angle between the vectors of two consecutive sub-strokes within a Stroke is greater than a 
+	 * class threshold then the stroke is divided into two separate strokes at that point.
+	 * (This is intended to round off the leading edges of strokes)
+	 * 
+	 * @param strokes - the list of strokes to analyse
+	 * @return the list of strokes with any strokes containing sharp changes in direction divided into two.
+	 */
 	public static List<Stroke> splitStrokesByDirection(List<Stroke> strokes) {
 		
 		List<Stroke> corrected = new ArrayList<Stroke>();
@@ -38,7 +53,7 @@ public class StrokePostProcess {
 				double angleDiff = (lss.get(j-1).getBearing()) - (lss.get(j).getBearing());
 				angleDiff = Math.abs((angleDiff + 180) % 360) - 180;
 
-				if(Math.abs(angleDiff)>90) {
+				if(Math.abs(angleDiff)>DIRECTION_CHANGE_THRESH) {
 					corrected.add(new Stroke(lss.subList(splitRef, j)));
 					splitRef=j;
 				}
@@ -69,19 +84,27 @@ public class StrokePostProcess {
 			}
 		}
 		
-		//create an image with all the pen strokes on for comparison.
-		Mat allStrokes = drawAllStrokes(penDownStrokes, textImg.size(), textImg.type());
+//		//create an image with all the pen strokes on for comparison.
+//		Mat allStrokes = drawAllStrokes(penDownStrokes, textImg.size(), textImg.type());
+		
 		List<Double> diffs = new ArrayList<Double>();
 		
 		//calculate how much each stroke 'contributes' to the ink trace of the collection of strokes.
 		for(int i=0; i<penDownStrokes.size(); i++) {
+			ArrayList<Stroke> single = new ArrayList<Stroke>();
+			single.add(penDownStrokes.get(i));
+			Mat line = drawAllStrokes(single, textImg.size(), textImg.type());
+			
 			ArrayList<Stroke> input = new ArrayList<Stroke>();
 			for(int j=0; j<penDownStrokes.size(); j++) {
 				if(j!=i) {
 					input.add(penDownStrokes.get(j));
 				}
 			}
-			diffs.add(calcError(allStrokes, input));	
+			
+			Mat strokeImg = drawAllStrokes(input, textImg.size(), textImg.type());
+			Mat strokeImgDilate = ProcessImage.erode(strokeImg, 11);
+			diffs.add(calcImpact(strokeImgDilate, line));	
 		}
 		
 		//remove those ink traces that fall below a certain threshold.
@@ -101,17 +124,15 @@ public class StrokePostProcess {
 	}
 	
 	/**
-	 * Method to calculate the difference between an input image of an ink trace and the collection of 
-	 * strokes that form that ink trace.
+	 * Method to calculate the difference between two images.
 	 * 
 	 * @param textImg - the binary image of the ink trace.
-	 * @param strokes - the list of strokes to compare to the ink trace.
-	 * @return the difference between the input image and an image created from drawing the list of strokes.
+	 * @param strokeImg - the binary image to compare to the ink trace.
+	 * @return the absolute difference between the two input images.
 	 */
-	private static double calcError(Mat textImg, List<Stroke> strokes) {
-		
-		Mat strokeImg = drawAllStrokes(strokes, textImg.size(), textImg.type());
-		
+	@SuppressWarnings("unused")
+	private static double calcError(Mat textImg, Mat strokeImg) {
+				
 		Mat diff = new Mat();
 		Core.absdiff(textImg, strokeImg, diff);
 		Scalar s = Core.sumElems(diff);
@@ -122,6 +143,29 @@ public class StrokePostProcess {
 		}
 		return sum;
 	}
+	
+	/**
+	 * Method which calculates how much a given line 'contributes' to a given image.  If adding the line
+	 * to the image changes it significantly, a larger number is returned.
+	 * 
+	 * @param textImg - the image of all the strokes except the line.
+	 * @param line - the image of only the line.
+	 * @return an indication of how much the line contributes to the stroke trace.
+	 */
+	private static double calcImpact(Mat textImg, Mat line) {
+		
+		Mat masked = new Mat();
+		line.copyTo(masked, textImg);
+		Mat diff2 = new Mat();
+		Core.subtract(textImg, masked, diff2);
+		double[] d = Core.sumElems(diff2).val;
+		double sum=0;
+		for(int i=0; i<d.length; i++) {
+			sum += d[i];
+		} 
+		return sum;
+	}
+	
 	
 	/**
 	 * Method to convert an object of type Stroke into a MatOfPoint.

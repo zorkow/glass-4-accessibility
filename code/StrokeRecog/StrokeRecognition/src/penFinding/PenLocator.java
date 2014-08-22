@@ -12,18 +12,20 @@ import org.opencv.imgproc.Imgproc;
  * Class to facilitate finding of a pen tip template within a larger image.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-30
+ * @version 2014-08-20
  */
 public class PenLocator {
 	
 	private Mat template;	//the template to find.
 	
-	private int matchMethod = Imgproc.TM_CCORR_NORMED;	//the method to use in the template-matching
-														//TM_CCORR_NORMED = Normalised Cross-correlation
-	private int pyramidLevels = 3;	//the number of levels to use in the image pyramid version of the template
-									//matching method.
-	private int pyramidDelta = 75;	//the distance either side of the best match location to look in higher
-									//levels of the pyramid (i.e. the search area is (2*pyramidDelta)*(2*pyramidDelta)).
+	private int matchMethod;	//the method to use in the template-matching
+									
+	//the number of levels to use in the image pyramid version of the template matching method.
+	private final int PYRAMID_LEVELS = 3;	
+	
+	//the distance either side of the best match location to look in higher levels of the pyramid (i.e. 
+	//the search area is (2*pyramidDelta)*(2*pyramidDelta)).
+	private final int PYRAMID_DELTA = 75;	
 	
 	/**
 	 * Constructor for PenLocator objects with user-defined template. 
@@ -33,6 +35,7 @@ public class PenLocator {
 	 */
 	public PenLocator(Mat temp) {
 		this.template = temp;
+		this.matchMethod = Imgproc.TM_CCORR_NORMED; //TM_CCORR_NORMED = Normalised Cross-correlation
 	}
 	
 	/**
@@ -40,6 +43,7 @@ public class PenLocator {
 	 * (Automatic template extraction NOT YET IMPLEMENTED.)
 	 */
 	public PenLocator() {
+		this.matchMethod = Imgproc.TM_CCORR_NORMED; //TM_CCORR_NORMED = Normalised Cross-correlation
 		//determine template in some way.
 		System.out.println("Automatic template extraction is not yet implemented.");
 	}
@@ -101,15 +105,15 @@ public class PenLocator {
 			throw new IllegalArgumentException("The source image is smaller than the template.");
 		}
 		
-		Mat[] srcPyramid = getImagePyramid(src, pyramidLevels);
-		Mat[] tempPyramid = getImagePyramid(template, pyramidLevels);
+		Mat[] srcPyramid = getImagePyramid(src, PYRAMID_LEVELS);
+		Mat[] tempPyramid = getImagePyramid(template, PYRAMID_LEVELS);
 		
 		int rowStart = 0; int rowEnd = 0; int colStart = 0; int colEnd = 0;
 		Coord minUL = new Coord(0,0);
 		double fitness = 0;
 		
 		//work through the pyramid levels from coarse image to fine image.
-		for(int i=pyramidLevels-1; i>=0; i--) {
+		for(int i=PYRAMID_LEVELS-1; i>=0; i--) {
 			
 			//Match the template
 			Mat result = new Mat();
@@ -135,10 +139,10 @@ public class PenLocator {
 			
 			if(i>0) {
 				//define the zone in which to search for the template in the next level up.
-				colStart = (minUL.getX()-pyramidDelta>0) ? minUL.getX()-pyramidDelta : 0;
-				colEnd = (minUL.getX()+pyramidDelta+tempPyramid[i-1].cols()<srcPyramid[i-1].cols()) ? minUL.getX()+pyramidDelta+tempPyramid[i-1].cols() : srcPyramid[i-1].cols();
-				rowStart = (minUL.getY()-pyramidDelta>0) ? minUL.getY()-pyramidDelta : 0;
-				rowEnd = (minUL.getY()+pyramidDelta+tempPyramid[i-1].rows()<srcPyramid[i-1].rows()) ? minUL.getY()+pyramidDelta+tempPyramid[i-1].rows() : srcPyramid[i-1].rows();
+				colStart = (minUL.getX()-PYRAMID_DELTA>0) ? minUL.getX()-PYRAMID_DELTA : 0;
+				colEnd = (minUL.getX()+PYRAMID_DELTA+tempPyramid[i-1].cols()<srcPyramid[i-1].cols()) ? minUL.getX()+PYRAMID_DELTA+tempPyramid[i-1].cols() : srcPyramid[i-1].cols();
+				rowStart = (minUL.getY()-PYRAMID_DELTA>0) ? minUL.getY()-PYRAMID_DELTA : 0;
+				rowEnd = (minUL.getY()+PYRAMID_DELTA+tempPyramid[i-1].rows()<srcPyramid[i-1].rows()) ? minUL.getY()+PYRAMID_DELTA+tempPyramid[i-1].rows() : srcPyramid[i-1].rows();
 				
 				srcPyramid[i-1] = srcPyramid[i-1].submat(rowStart, rowEnd, colStart, colEnd).clone(); 
 			}

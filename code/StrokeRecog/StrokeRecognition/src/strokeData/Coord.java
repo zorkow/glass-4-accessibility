@@ -4,7 +4,7 @@ package strokeData;
  * A class which represents a standard 2D coordinate.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-16
+ * @version 2014-08-20
  */
 public class Coord {
 
@@ -23,7 +23,12 @@ public class Coord {
 		this.y=y;
 	}
 
-	
+	/**
+	 * Method to find the Euclidean distance between this Coord and another Coord.
+	 * 
+	 * @param other - the other Coord to calculate the Euclidean distance to.
+	 * @return the Euclidean distance between this coordinate and the provided other coordinate.
+	 */
 	public int findDist(Coord other) {
 		double dist = Math.sqrt(Math.pow(getX()-other.getX(), 2) + Math.pow(getY()-other.getY(), 2));
 		return (int) Math.round(dist);
@@ -60,8 +65,37 @@ public class Coord {
 	public void setY(int y) {
 		this.y = y;
 	}
+	
+	/**
+	 * Method to add a specified value to the x coordinate.
+	 * 
+	 * @param deltaX - the value to add to the x coordinate.
+	 */
+	public void addToX(int deltaX) {
+		this.x += deltaX;
+	}
+	
+	/**
+	 * Method to add a specified value to the y coordinate.
+	 * 
+	 * @param deltaY - the value to add to the y coordinate.
+	 */
+	public void addToY(int deltaY) {
+		this.y += deltaY;
+	}
 
+	@Override
 	public String toString() {
 		return "X = " + getX() + ", Y = " + getY();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if(o instanceof Coord) {
+			Coord c = (Coord) o;
+			return (getX()==c.getX() && getY()==c.getY());	
+		} else {
+			return false;
+		}
 	}
 }

@@ -9,7 +9,7 @@ import org.opencv.highgui.Highgui;
  * sequentially numbered frames.  (Frames should be numbered 1, 2, 3, etc. not 01, 02, 045 etc.)
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-30
+ * @version 2014-08-20
  */
 public class ProcessJpgs extends ProcessVideo {
 
@@ -21,7 +21,8 @@ public class ProcessJpgs extends ProcessVideo {
 	/**
 	 * Constructor for ProcessJpgs objects with automatic template extraction.
 	 * 
-	 * @param videoFile - the full file path including extension of the video file to use as input.
+	 * @param videoFile - the file path up to but not including the number of the frame 
+	 * (e.g. "C:\\video\\frame_") of the video file to use as input.
 	 * @param lastFrame - the number of the final frame in the sequence of jpgs.
 	 */
 	public ProcessJpgs(String videoFile, int lastFrame) {
@@ -32,7 +33,8 @@ public class ProcessJpgs extends ProcessVideo {
 	/**
 	 * Constructor for ProcessJpgs objects with a user-defined template.
 	 * 
-	 * @param videoFile - the full file path including extension of the video file to use as input.
+	 * @param videoFile - the file path up to but not including the number of the frame 
+	 * (e.g. "C:\\video\\frame_") of the video file to use as input.
 	 * @param lastFrame - the number of the final frame in the sequence of jpgs.
 	 * @param template - the full file path including extension of the image file to use as template.
 	 */
@@ -57,6 +59,12 @@ public class ProcessJpgs extends ProcessVideo {
 	public Mat getFrame() {
 		Mat frame = Highgui.imread(videoFile + frameNum + ".jpg");
 		frameNum++;
+		return frame;
+	}
+	
+	@Override
+	public Mat getCurrentFrame() {
+		Mat frame = Highgui.imread(videoFile + (frameNum-1) + ".jpg");
 		return frame;
 	}
 

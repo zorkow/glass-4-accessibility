@@ -1,5 +1,9 @@
 package upDownClassifier;
 
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,20 +23,23 @@ import videoProcessing.ProcessImage;
  * Includes a method to draw all the pen-down Strokes onto an image.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-30
+ * @version 2014-08-20
  */
 public class StrokeClassifier {
 
 	private List<SubStroke> subStrokeRecord;	//the collection of all the pen sub-strokes in sequence.
 	private List<Stroke> strokeRecord; 		//the collection of all complete strokes.
 	
-	private final int strokeContinuityThresh = 5; 	//if the length of a stroke is below this value, it is 
-													//assimilated into the adjacent strokes. (i.e. if there 
-													//is a pen-up stroke of length 4 between two pen-down 
-													//strokes, it is assumed that the Strokes should actually 
-													//be continuous).
-	private final int lineErrorThresh = 80;	//when a sub-stroke is compared to an ink trace, if the 
-											//difference exceeds this value, it is assumed to be pen-up.
+	
+	//if the length of a stroke is below this value, it is assimilated into the adjacent strokes. (i.e. 
+	//if there is a pen-up stroke of length less than this number between two pen-down strokes, it is 
+	//assumed that the Strokes should actually be continuous).
+	private final int STROKE_CONTINUITY_THRESH = 10; 	
+
+	//when a sub-stroke is compared to an ink trace, if the difference between the two exceeds this value, 
+	//it is assumed to be pen-up.
+	private final int LINE_ERROR_THRESH = 80;	
+	
 	
 	/**
 	 * Constructor for StrokeClassifier.
@@ -54,7 +61,7 @@ public class StrokeClassifier {
 		
 		for(int i=0; i<subStrokeRecord.size(); i++) {
 			double error = checkLine(src, subStrokeRecord.get(i).getStart(), subStrokeRecord.get(i).getEnd());
-			if(error<lineErrorThresh) {
+			if(error<LINE_ERROR_THRESH) {
 				subStrokeRecord.get(i).setPenDown(true);
 			} else {
 				subStrokeRecord.get(i).setPenDown(false);
@@ -77,10 +84,14 @@ public class StrokeClassifier {
 	 */
 	private double checkLine(Mat bin, Coord start, Coord end) {
 		
-		int rowStart = Math.min(start.getY(), end.getY())-5;
-		int rowEnd = Math.max(start.getY(), end.getY())+5;
-		int colStart = Math.min(start.getX(), end.getX())-5;
-		int colEnd = Math.max(start.getX(), end.getX())+5;
+		int rowStart = (Math.min(start.getY(), end.getY())-5)>0 ? (Math.min(start.getY(), end.getY())-5) : 0;
+		int rowEnd = (Math.max(start.getY(), end.getY())+5)<bin.rows() ? (Math.max(start.getY(), end.getY())+5) : bin.rows(); 
+		int colStart = (Math.min(start.getX(), end.getX())-5)>0 ? (Math.min(start.getX(), end.getX())-5) : 0;
+		int colEnd = (Math.max(start.getX(), end.getX())+5)<bin.cols() ? (Math.max(start.getX(), end.getX())+5) : bin.cols();
+		rowEnd = rowEnd<0 ? 0 : rowEnd;
+		rowStart = rowStart>bin.rows() ? bin.rows() : rowStart;
+		colEnd = colEnd<0 ? 0 : colEnd;
+		colStart = colStart>bin.cols() ? bin.cols() : colStart;
 		
 		Mat original = new Mat();
 		original = bin.submat(rowStart, rowEnd, colStart, colEnd);
@@ -128,15 +139,28 @@ public class StrokeClassifier {
 		
 		for(int i=0; i<strokeRecord.size(); i++) {
 			List<SubStroke> lss = strokeRecord.get(i).getPoints();
-			Scalar colour = new Scalar((int) (Math.random()*220), (int) (Math.random()*220), (int) (Math.random()*220));
+			Scalar randColour = new Scalar((int) 30+(Math.random()*200), (int) 30+(Math.random()*200), (int) 30+(Math.random()*200));
 			for(int j=0; j<lss.size(); j++) {
 				SubStroke ss = lss.get(j);
 				if(ss.isPenDown()) {
-					ProcessImage.drawColouredLine(src, ss.getStart(), ss.getEnd(), colour);
+					ProcessImage.drawColouredLine(src, ss.getStart(), ss.getEnd(), randColour);
 				}
 			}
 		}
 		
+	}
+	
+	/**
+	 * Method to populate the sub-stroke record from an ordered (chronological) list of coordinates.  All 
+	 * sub-strokes are initially assumed to be pen-down.  The record must be analysed separately (with 
+	 * method analyseRecord() ) to determine if sub-strokes are pen-up or pen-down.
+	 * 
+	 * @param points - the ordered list of coordinates from which to create the sub-stroke record.
+	 */
+	public void populateSubStrokeRecord(List<Coord> points) {
+		for(int i=0; i<points.size()-1; i++) {
+			addSubStroke(new SubStroke(points.get(i), points.get(i+1), true));
+		}
 	}
 	
 	/**
@@ -159,11 +183,12 @@ public class StrokeClassifier {
 				currentPenState = !currentPenState;
 			}
 		}
+		strokeRecord.add(strk);
 		
 		//correct for short Strokes:
 		for(int i=0; i<strokeRecord.size(); i++) {
 			Stroke strk2 = strokeRecord.get(i);
-			if(strk2.getPoints().size()<strokeContinuityThresh) {
+			if(strk2.getPoints().size()<STROKE_CONTINUITY_THRESH) {
 				//first swap the Pen Up/Down state to match adjacent Stroke(s)
 				strokeRecord.get(i).changePenState();	
 				if(i==0) {
@@ -184,6 +209,52 @@ public class StrokeClassifier {
 				}
 			}
 		}
+		
+	}
+	
+	/**
+	 * Method to write out the Stroke record.  Strokes are written out as lists of chronological
+	 * coordinates, with each coordinate written on a new line.
+	 * Each stroke is separated by "Stroke i:" where i is the number of the stroke.
+	 * 
+	 * @param file - the full file path included extension of where to write the stroke record to.
+	 * @throws FileNotFoundException - if the specified file cannot be accessed.
+	 */
+	public void printStrokeRecord(String file) throws FileNotFoundException {
+		
+		BufferedWriter out = null;
+		
+		try {
+			out = new BufferedWriter(new FileWriter(file)); 
+			
+			for(int i=0; i<strokeRecord.size(); i++) {
+				
+				Stroke strk = strokeRecord.get(i);
+				out.write("Stroke " + i + ":" + System.lineSeparator());
+				List<SubStroke> points = strk.getPoints();
+				for(int j=0; j<points.size(); j++) {
+					out.write(points.get(j).getStart().getX() + ", " + points.get(j).getStart().getY() + System.lineSeparator());
+					if(j==points.size()-1) {
+						out.write(points.get(j).getEnd().getX() + ", " + points.get(j).getEnd().getY() + System.lineSeparator());
+					}
+				}
+				out.write(System.lineSeparator());
+			}
+			
+		} catch(FileNotFoundException e1) {
+			throw e1;
+		} catch(IOException e2) {
+			e2.printStackTrace();
+		} finally {
+			if(out!=null) {
+				try {
+					out.close();
+				} catch(IOException e3) {
+					e3.printStackTrace();
+				}
+			}
+		}
+		
 		
 	}
 	

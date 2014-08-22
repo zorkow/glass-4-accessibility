@@ -5,7 +5,7 @@ package strokeData;
  * ballpoint and whether the pen is writing (i.e. pen-down) or not writing  (pen-up).
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-07-30
+ * @version 2014-08-20
  */
 public class SubStroke {
 
@@ -82,13 +82,20 @@ public class SubStroke {
 		return Math.sqrt(Math.pow(start.getX()-end.getX(), 2) + Math.pow(start.getY()-end.getY(), 2));
 	}
 	
+	/**
+	 * Method to get the bearing from north defined by the start and end points of the sub-stroke.  
+	 * Note that the bearing is defined in the standard x-y coordinate system (i.e. positive y is north and
+	 * positive x is east).
+	 * 
+	 * @return the bearing from north of the vector defined by the start and end points of the sub-stroke.
+	 */
 	public double getBearing() {
 		int deltaX = end.getX() - start.getX();
 		int deltaY = end.getY() - start.getY();
 		
 		double angleInRad = Math.atan2(deltaY, deltaX);
 		double angleInDeg = angleInRad * 180 / Math.PI;
-		angleInDeg = (angleInDeg*-1) + 90;
+		angleInDeg = (angleInDeg*-1) + 90;	//we do this conversion as atan2() gives angles between -pi and pi.
 		double bearing = (angleInDeg + 360) % 360;
 		
 		return bearing;
