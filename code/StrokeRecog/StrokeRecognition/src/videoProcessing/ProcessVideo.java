@@ -4,7 +4,6 @@ import imageRegistration.MovementTracker;
 import ink.canvas.TraceList;
 
 import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
@@ -30,7 +29,7 @@ import upDownClassifier.StrokeClassifier;
  * This forms the Model part of the Model-View pattern used for the GUI.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public abstract class ProcessVideo extends Observable {
 	
@@ -45,7 +44,7 @@ public abstract class ProcessVideo extends Observable {
 	
 	//the threshold which determines whether the tracker has lost the template.  If the template-match fitness
 	//drops below this value, the program reverts to searching the whole image to try to re-find the template.
-	private final double FITNESS_THRESHOLD = 0.98;
+	private final double FITNESS_THRESHOLD = 0.96;
 	
 	//constant which effectively defines the size of the ROI within which to look for the pen head. The ROI 
 	//is extended by SEARCH_SIZE above, below, left and right of the predicted pen-tip location, so the ROI 
@@ -109,7 +108,6 @@ public abstract class ProcessVideo extends Observable {
 		//extract the first frame from the input, process it and find the best template match location.  
 		//Indicate the location with a green rectangle on the source image.
 		img = getFrame();
-		Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\frame_" + 1 + ".jpg", img);
 		setROI(new Coord(0,0));
 		filteredImg = ProcessImage.prepareImage(img);
 		TempMatchOutput initialMatch = pl.findTemplatePyramid(filteredImg);
@@ -117,11 +115,11 @@ public abstract class ProcessVideo extends Observable {
 				initialMatch.getBestMatch().getY()), pl.getTemplate().cols(), pl.getTemplate().rows());
 		
 		//initialise the filter with the initial location.
-		filter = new KalmanFilter(initialMatch.getBestMatch(), 1.0, 0.5, 1.5);
-		long t0, t1, t2, t3, t4=0, t5;
+		filter = new KalmanFilter(initialMatch.getBestMatch(), 1.0, 0.3, 50);
+		long t0, t1, t2, t3, t4, t5, t6;
 		
 		//loop through all the frames.
-		while(frameAvailable() && getFrameNum()<551) {
+		while(frameAvailable() && getFrameNum()<1001) {
 			
 			t0 = System.currentTimeMillis();
 			
@@ -133,13 +131,15 @@ public abstract class ProcessVideo extends Observable {
 	    		
 	    	//get the next frame and process it.
 			img = getFrame();
-			Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\frame_" + getFrameNum() + ".jpg", img);
+//			Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\frame_" + getFrameNum() + ".jpg", img);
 			filteredImg = ProcessImage.prepareImage(img);
+			
+			t2 = System.currentTimeMillis();
 			
 			//transform the frame into the base coordinate system.
 			Mat trans = mt.trackMovement(img, getFrameNum());
 			
-			t2 = System.currentTimeMillis();
+			t3 = System.currentTimeMillis();
 			
 	    	//predict the next location of the template.
 	    	Coord predictedPos = filter.kalmanFilterPredict();
@@ -150,29 +150,26 @@ public abstract class ProcessVideo extends Observable {
 			Coord globalPos = new Coord(roiPos.getX() + localMatch.getBestMatch().getX(), 
 					roiPos.getY() + localMatch.getBestMatch().getY());
 			
-			t3 = System.currentTimeMillis();
+			t4 = System.currentTimeMillis();
 			
-			Coord bPoint = null;
 			//if the template match fitness is too poor, search again for the template within the whole image:
 			if(localMatch.getFitness()<FITNESS_THRESHOLD) {
 				globalPos = pl.findTemplatePyramid(filteredImg).getBestMatch();
 			}
 			
-			t4 = System.currentTimeMillis();
+			t5 = System.currentTimeMillis();
 
 			//find the 'ballpoint' of the pen within the region of interest (i.e. within the matched template location):
-			bPoint = bpl.findBallpoint(img.submat(globalPos.getY(), globalPos.getY()+pl.getTemplate().rows(), globalPos.getX(), globalPos.getX()+pl.getTemplate().cols()));
+			Coord bPoint = bpl.findBallpoint(img.submat(globalPos.getY(), globalPos.getY()+pl.getTemplate().rows(), globalPos.getX(), globalPos.getX()+pl.getTemplate().cols()));
 			//if the ballpoint is found (i.e. not null) adjust the location into the frame's coordinate system, 
 			//then convert the point into the reference frame's coordinate system.
 			if(bPoint!=null) {
 				Coord converted = MovementTracker.convertAffine(new Coord(bPoint.getX() + globalPos.getX(), bPoint.getY() + globalPos.getY()), trans);
 				bPoint.setX(converted.getX());
 				bPoint.setY(converted.getY());
-//				bPoint.setX(bPoint.getX() + globalPos.getX());
-//				bPoint.setY(bPoint.getY() + globalPos.getY());
 			}
 
-			t5 = System.currentTimeMillis();
+			t6 = System.currentTimeMillis();
 			
 			//indicate the template location with a green rectangle on the source image.
 			ProcessImage.drawGreenRect(img, new Point(globalPos.getX(), globalPos.getY()), 
@@ -182,8 +179,8 @@ public abstract class ProcessVideo extends Observable {
 			filter.kalmanFilterMeasure(globalPos);
 			
 			//print out a summary for this frame.
-			System.out.println("Time 1 = " + (t1-t0) + ", Time 2 = " + (t2-t1) + ", Time 3 = " + (t3-t2)
-					+ ", Time 4 = " + (t4-t3) + ", Time 5 = " + (t5-t4));
+			System.out.println("Time 1 (Update GUI) = " + (t1-t0) + ", Time 2 (Get next frame) = " + (t2-t1) + ", Time 3 (Get transformation) = " + (t3-t2));
+			System.out.println("Time 4 (Find template local) = " + (t4-t3) + ", Time 5 (Find template global) = " + (t5-t4) + ", Time 6 (Find ballpoint) = " + (t6-t5));
 			printSummary(predictedPos, globalPos, localMatch.getFitness(), bPoint);
 		}
 		
@@ -192,7 +189,6 @@ public abstract class ProcessVideo extends Observable {
 		filteredImg = ProcessImage.prepareImage(img);
 		//use the final frame to extract the ink trace.
 		Mat inkTrace = ProcessImage.extractInkTrace(img, 1, 15);
-		Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\templates\\bPoint\\inktrace.jpg", inkTrace);
 		
 		//The full transform relates how to get from the reference frame's coordinate system to the final
 		//frame's coordinate system.  We want the reverse of this, so we invert the transformation matrix
@@ -234,20 +230,25 @@ public abstract class ProcessVideo extends Observable {
 		//finally, update the GUI with the images showing the estimated Strokes and release any resources if necessary.
 		Imgproc.cvtColor(inkTrace, inkTrace, Imgproc.COLOR_GRAY2BGR);
 		sc.drawStrokes(inkTrace);
+		
+		String eqn = "TEST";
+//		Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\" + eqn + "_output-1.jpg", filteredImg);
+//		Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\" + eqn + "_output-2.jpg", img);
+//		Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\" + eqn + "_output-3.jpg", inkTrace);
 		img=inkTrace;
 		setChanged();
 		notifyObservers();
 		
-		try {
-			sc.printStrokeRecord("C:\\Users\\Simon\\Desktop\\forMeeting\\forBehrang\\test.txt");
-		} catch(FileNotFoundException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			sc.printStrokeRecord("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\" + eqn + "_output-strokes.txt");
+//		} catch(FileNotFoundException e) {
+//			e.printStackTrace();
+//		}
 		
 		releaseResources();
 		
 		List<TraceList> characters = RecognizeStroke.compileCharacters(sc.getStrokeRecord());
-		RecognizeStroke.recognizeCharacters(characters);
+		RecognizeStroke.recognizeCharacters(characters, "C:\\Users\\Simon\\Desktop\\glassVids\\dump\\" + eqn + "_output-recog.txt");
 		
 	}
 	

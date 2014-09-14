@@ -19,7 +19,7 @@ import videoProcessing.ProcessImage;
  * 2=Other. 
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public class Zone {
 
@@ -29,7 +29,7 @@ public class Zone {
 	private static final int WHITE_THRESHOLD = 252;
 	private static final int DARK_THRESHOLD1 = 80;
 	private static final double DARK_THRESHOLD2 = 0.20;
-	private static final double TEXT_THRESHOLD = 1.5;
+	private static final double TEXT_THRESHOLD = 2;
 	
 	/**
 	 * Constructor for Zone objects.
@@ -96,7 +96,7 @@ public class Zone {
 		//detect the edges in the image, dilate them slightly to sort out any discontinuities
 		//then convert the edges image to black edges on a white background.
 		Mat edges = ProcessImage.cannyEdge(imgGray, 150, 75);
-		edges = ProcessImage.dilate(edges, 3);
+		edges = ProcessImage.dilate(edges, 5);
 		Imgproc.threshold(edges, edges, 127, 255, Imgproc.THRESH_BINARY_INV);
 		
 		//move the window across the, with windows overlapping at half the windowSize. 
@@ -157,7 +157,7 @@ public class Zone {
 		Mat winCopy = new Mat();
 		Core.normalize(window, winCopy, 0, 255, Core.NORM_MINMAX);
 		Imgproc.threshold(winCopy, winCopy, 127, 255, Imgproc.THRESH_BINARY+Imgproc.THRESH_OTSU);
-
+		
 		Mat out = new Mat();
 		Core.subtract(edges, winCopy, out);
 
@@ -302,7 +302,7 @@ public class Zone {
 		bestRect.setWidth(bestRect.getWidth()*spacingX);
 		bestRect.setHeight(bestRect.getHeight()*spacingY);
 		
-		System.out.println("Largest area = " + bestRect.getArea());
+//		System.out.println("Largest area = " + bestRect.getArea());
 		return bestRect;
 		
 	}

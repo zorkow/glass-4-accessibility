@@ -19,7 +19,7 @@ import videoProcessing.ProcessImage;
  * very end point of the pen where it contacts the whiteboard).
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public class BallpointLocator {
 
@@ -31,8 +31,8 @@ public class BallpointLocator {
 	private Coord validZoneBottomRight; //the coordinates of the bottom right point of the zone in which a ballpoint is
 										//considered valid (keep zone as small as practicable for better accuracy in results)
 	
-	private final double GAUSS_BLUR_SRC_WEIGHT = 3;	//value to use in the sharpening of the pen-tip image step
-	private final double GAUSS_BLUR_BLURRED_WEGIGHT = -0.5; //value to use in the sharpening of the pen-tip image step
+	private final double GAUSS_BLUR_SRC_WEIGHT = 2;	//value to use in the sharpening of the pen-tip image step
+	private final double GAUSS_BLUR_BLURRED_WEIGHT = -0.5; //value to use in the sharpening of the pen-tip image step
 	
 	private final int CANNY_LOW = 40;	//the lower threshold to use in the Canny edge detector
 	private final int CANNY_HIGH = 80;	//the upper threshold to use in the Canny edge detector.
@@ -80,7 +80,7 @@ public class BallpointLocator {
 //		Highgui.imwrite(folder + count + "-1-src.jpg", src);
 		
 		//first attempt to remove blur from the image, the use Canny to detect edges.
-		Mat sharpen = ProcessImage.sharpenWithGaussianBlur(src, GAUSS_BLUR_SRC_WEIGHT, GAUSS_BLUR_BLURRED_WEGIGHT);	
+		Mat sharpen = ProcessImage.sharpenWithGaussianBlur(src, GAUSS_BLUR_SRC_WEIGHT, GAUSS_BLUR_BLURRED_WEIGHT);	
 		Mat detectedEdges = new Mat();
 		detectedEdges = ProcessImage.cannyEdge(sharpen, CANNY_HIGH, CANNY_LOW);
 		detectedEdges = ProcessImage.dilate(detectedEdges, 2);
@@ -107,9 +107,10 @@ public class BallpointLocator {
 		//Use the processed image to estimate the ballpoint location.
 		Mat edgesBGR = new Mat();
 		Imgproc.cvtColor(filteredEdges, edgesBGR, Imgproc.COLOR_GRAY2BGR);
-		Coord bPoint = ballpointLocate(edgesBGR, lines);
-		
 //		Highgui.imwrite(folder + count + "-2-edges.jpg", edgesBGR);
+		Coord bPoint = ballpointLocate(edgesBGR, lines);
+//		Highgui.imwrite(folder + count + "-4-output.jpg", edgesBGR);
+		
 		Mat out = new Mat();
 		edgesBGR.copyTo(out);
 		ProcessImage.drawAllLines(out, lines);
@@ -250,11 +251,25 @@ public class BallpointLocator {
 		
 		Coord adjustedBPoint = null;
 		
-		//first check whether the estimated ballpoint is already on an edge.
-		double[] vals = src.get(bPointEst.getY(), bPointEst.getX());
-		if(vals[0]==255 && vals[1]==255 &&  vals[2]==255) {
-			adjustedBPoint = new Coord((bPointEst.getX()), (bPointEst.getY()));
-			return adjustedBPoint;
+		if(bPointEst.getY()>0 && bPointEst.getY()<src.rows() && bPointEst.getX()>0 && bPointEst.getX()<src.cols() ) {
+			//first check whether the estimated ballpoint is already on an edge.
+			double[] vals = src.get(bPointEst.getY(), bPointEst.getX());
+			if(vals[0]==255 && vals[1]==255 &&  vals[2]==255) {
+				adjustedBPoint = new Coord((bPointEst.getX()), (bPointEst.getY()));
+				return adjustedBPoint;
+			}
+		} else {
+			if(bPointEst.getY()<0) {
+				bPointEst.setY(0);
+			} else if(bPointEst.getY()>src.rows()) {
+				bPointEst.setY(src.rows());
+			}
+			
+			if(bPointEst.getX()<0) {
+				bPointEst.setX(0);
+			} else if(bPointEst.getX()>src.cols()) {
+				bPointEst.setX(src.cols());
+			}
 		}
 		
 		//search radius increases to 20 - if an edge is not found, it is assumed that the estimate is poor

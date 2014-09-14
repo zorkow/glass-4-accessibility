@@ -23,7 +23,7 @@ import videoProcessing.ProcessImage;
  * Includes a method to draw all the pen-down Strokes onto an image.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public class StrokeClassifier {
 
@@ -139,7 +139,7 @@ public class StrokeClassifier {
 		
 		for(int i=0; i<strokeRecord.size(); i++) {
 			List<SubStroke> lss = strokeRecord.get(i).getPoints();
-			Scalar randColour = new Scalar((int) 30+(Math.random()*200), (int) 30+(Math.random()*200), (int) 30+(Math.random()*200));
+			Scalar randColour = new Scalar((int) 50+(Math.random()*190), (int) 50+(Math.random()*190), (int) 50+(Math.random()*190));
 			for(int j=0; j<lss.size(); j++) {
 				SubStroke ss = lss.get(j);
 				if(ss.isPenDown()) {

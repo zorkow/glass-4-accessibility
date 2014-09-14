@@ -33,7 +33,7 @@ import videoProcessing.ProcessImage;
  * matrix to get the reverse transformation.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public class MovementTracker {
 
@@ -105,14 +105,14 @@ public class MovementTracker {
 		//zone the current image into blocks of dimension windowSize and classify them as either whiteboard,
 		//text or 'other' (hand/pen).
 		List<Zone> currentZones = Zone.classifyZones(currentFrameGray, windowSize);
+//		Zone.drawZones(currentFrame, currentZones, "C:\\Users\\Simon\\Desktop\\glassVids\\dump\\zones_" + num + ".jpg");
 		currentZones = Zone.removeZoneOfType(currentZones, 2);
 		List<Zone> currentTextZones = Zone.getZoneOfType(currentZones, 1);
-		boolean poorTransform = false;
 		
 		//if text has been detected in consecutive frames, it is likely that this truly is text, so 
 		//register the frames
 		if(prevTextZones.size()>=TEXT_ZONE_MIN && currentTextZones.size()>=TEXT_ZONE_MIN) {
-
+			
 			//we create the rectangular ROI we will use to register the two frames.  The ROI is formed by
 			//finding a large text area among the text zones, and then expanding this zone as far as possible 
 			//to the top and left of the image.  This should give us a satisfactorily large zone to register with.
@@ -134,36 +134,25 @@ public class MovementTracker {
 			Imgproc.goodFeaturesToTrack(subPrevFrameGray, trackPoints, MAX_TRACKING_POINTS, 
 					TRACKING_THRESH, MIN_TRACKING_SPACING);
 			
-			//the tracking points found at the edge of the image may not be present in the next frame, so remove
-			//these from the list.
-			trackPoints = filterOutPtsNrBoundary(trackPoints, registerZone);
+			MatOfPoint2f prevPoints = new MatOfPoint2f(trackPoints.toArray());
+			MatOfPoint2f nextPoints = new MatOfPoint2f();
+			MatOfByte status = new MatOfByte();
+			MatOfFloat err = new MatOfFloat();
+			
+			if(trackPoints.rows()>0) {
+				//find the tracking points in the current frame using the Lucas-Kanade optical flow technique.
+				Video.calcOpticalFlowPyrLK(subPrevFrameGray, subCurrentFrameGray, prevPoints, nextPoints, status, err);
+
+				//check that the estimated nextPoints are within the image boundary. If not, they are removed.
+				verifyPoints(prevPoints, nextPoints, registerZone);
+			}
 			
 			Mat transform = new Mat();
 			
 			//if we have enough tracking points, calculate the affine transformation, otherwise, calculate the
 			//translation transformation.
-			if(trackPoints.rows()>=FEATURE_POINT_MIN) {
+			if(prevPoints.rows()>=FEATURE_POINT_MIN) {
 				
-				MatOfPoint2f prevPoints = new MatOfPoint2f(trackPoints.toArray());
-				MatOfPoint2f nextPoints = new MatOfPoint2f();
-				MatOfByte status = new MatOfByte();
-				MatOfFloat err = new MatOfFloat();
-				
-				//find the tracking points in the current frame using the Lucas-Kanade optical flow technique.
-				Video.calcOpticalFlowPyrLK(subPrevFrameGray, subCurrentFrameGray, prevPoints, nextPoints, status, err);
-//				Mat out1 = drawPoints(subPrevFrameGray, prevPoints);
-//				Mat out2 = drawPoints(subCurrentFrameGray, nextPoints);
-//				Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\points_" + num + "-1.jpg", out1);
-//				Highgui.imwrite("C:\\Users\\Simon\\Desktop\\glassVids\\dump\\points_" + num + "-2.jpg", out2);
-				
-				if(num>470) {
-					System.out.println("");
-				}
-				
-				//check that the estimated nextPoints are within the image boundary. If not, they are removed.
-				verifyPoints(prevPoints, nextPoints, registerZone);
-				
-				if(prevPoints.rows()>=FEATURE_POINT_MIN) {
 				//use the two sets of points to calculate the affine transformation between frames.
 				transform = Video.estimateRigidTransform(prevPoints, nextPoints, false);
 				
@@ -175,10 +164,6 @@ public class MovementTracker {
 				}
 				System.out.println("Transform error = " + transError);
 				if(transError>TRANS_ERROR_THRESH) {
-					transform = getNoChangeTrans();
-					poorTransform = true;
-				}
-				} else {
 					transform = registerImgTranslation(prevFrameGray, currentFrameGray, registerZone);
 				}
 				
@@ -191,12 +176,9 @@ public class MovementTracker {
 			
 		} 
 		
-		//as long as there wasn't a poor affine transformation, make the current frame the previous frame.
-		if(!poorTransform) {
-			currentFrameGray.copyTo(prevFrameGray);
-			prevZones = currentZones;
-			prevTextZones = currentTextZones;
-		}
+		currentFrameGray.copyTo(prevFrameGray);
+		prevZones = currentZones;
+		prevTextZones = currentTextZones;
 		
 		//we want to return the transformation from the current frame back to the reference frame (this
 		//is the inverse of the full transform from reference to current frame.
@@ -211,6 +193,7 @@ public class MovementTracker {
 	 * @param registerZone - the rectangular zone used for frame registration
 	 * @return - the filtered tracking points, with those near the boundary removed.
 	 */
+	@SuppressWarnings("unused")
 	private MatOfPoint filterOutPtsNrBoundary(MatOfPoint trackPoints, Rect registerZone) {
 		
 		MatOfPoint filtered = new MatOfPoint();
@@ -453,7 +436,8 @@ public class MovementTracker {
 	 */
 	public static Mat transformFrame(Mat src, Mat trans) {
 		Mat warp = new Mat();
-		Size s = new Size(src.cols(), src.rows());
+		Coord convert = convertAffine(new Coord(src.cols(), src.rows()), trans);
+		Size s = new Size(convert.getX(), convert.getY());
 //		Imgproc.warpAffine(src, warp, trans, s);
 		Imgproc.warpAffine(src, warp, trans, s, Imgproc.INTER_LINEAR, Imgproc.BORDER_CONSTANT, 
 				new Scalar(245,245,245));
@@ -484,7 +468,7 @@ public class MovementTracker {
 		
 		Mat copy = new Mat();
 		img.copyTo(copy);
-		
+		Imgproc.cvtColor(copy, copy, Imgproc.COLOR_GRAY2BGR);
 		for(int i=0; i<points.rows(); i++) {
 			double[] point = points.get(i, 0);
 			Coord centre = new Coord((int) Math.round(point[0]), (int) Math.round(point[1]));

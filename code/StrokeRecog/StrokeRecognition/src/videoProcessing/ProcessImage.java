@@ -19,7 +19,7 @@ import strokeData.Coord;
  * Class containing a collection of static methods for processing images stored as OpenCV Mat objects.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public class ProcessImage {
 	
@@ -32,8 +32,7 @@ public class ProcessImage {
 	 */
 	public static Mat prepareImage(Mat src) {
 		Mat stripped = new Mat();
-		src.copyTo(stripped);
-		stripped = ProcessImage.sharpenWithGaussianBlur(src, 2, 0.5);
+		Core.addWeighted(src, 1, src, 1, 0, stripped);
 		return stripped;
 	}
 	

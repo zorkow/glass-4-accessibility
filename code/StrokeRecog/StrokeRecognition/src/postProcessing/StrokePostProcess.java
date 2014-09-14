@@ -22,7 +22,7 @@ import videoProcessing.ProcessImage;
  * obtained.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public class StrokePostProcess {
 	
@@ -30,7 +30,7 @@ public class StrokePostProcess {
 	
 	//if the angle (in degrees) between the two vectors of two consecutive sub-strokes is greater than 
 	//this threshold, the strokes are split into separate strokes at this point..
-	private static final int DIRECTION_CHANGE_THRESH = 90;
+	private static final int DIRECTION_CHANGE_THRESH = 160;
 	
 	/**
 	 * Method to divide strokes where there is a sharp change of direction within a Stroke.

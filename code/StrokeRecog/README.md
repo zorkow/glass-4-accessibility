@@ -7,6 +7,7 @@ The code is obviously still very much work-in-progress, and it should be noted t
 ##Running the program##
 
 You will need the Java OpenCV library (v2.4.9) installed and added to the build path as a user library (see [here][1] for download and [here][2] for using with Eclipse).  
+For the Character Recognition part of the code to work, the two external JAR files, Ink.jar and Jama.jar need to be added to the build path.  These files can be found in the Stroke Recognition code folder.  The files in the 'lspData' folder are also required should be included copied to the project directory.
 
 The program is designed to take input from any one of:
 >1) Webcam

@@ -12,7 +12,7 @@ import org.opencv.imgproc.Imgproc;
  * Class to facilitate finding of a pen tip template within a larger image.
  * 
  * @author Simon Dicken (Student ID: 1378818)
- * @version 2014-08-20
+ * @version 2014-09-10
  */
 public class PenLocator {
 	
